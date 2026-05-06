@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>○○○旅行</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <svg class="svg-sprite" aria-hidden="true" focusable="false">
+      <symbol id="icon-leaf" viewBox="0 0 24 24">
+        <path d="M20 4C11 4 5 9 5 17c0 2 1 3 3 3 8 0 12-7 12-16Z" />
+        <path d="M5 19c4-6 8-9 14-13" />
+      </symbol>
+      <symbol id="icon-trail" viewBox="0 0 24 24">
+        <path d="M4 19c3-4 7-4 10-8 2-3 4-5 6-6" />
+        <path d="M6 8h.01" />
+        <path d="M11 5h.01" />
+        <path d="M17 16h.01" />
+      </symbol>
+      <symbol id="icon-map" viewBox="0 0 24 24">
+        <path d="m8 5 8-3 5 2v15l-5-2-8 3-5-2V3l5 2Z" />
+        <path d="M8 5v15" />
+        <path d="M16 2v15" />
+      </symbol>
+      <symbol id="icon-mountain" viewBox="0 0 24 24">
+        <path d="m3 20 7-13 4 7 2-3 5 9H3Z" />
+        <path d="m10 7 2 4 2-2" />
+      </symbol>
+      <symbol id="icon-note" viewBox="0 0 24 24">
+        <path d="M6 3h9l3 3v15H6V3Z" />
+        <path d="M15 3v4h4" />
+        <path d="M9 12h6" />
+        <path d="M9 16h4" />
+      </symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </symbol>
+      <symbol id="icon-save" viewBox="0 0 24 24">
+        <path d="M5 3h12l2 2v16H5V3Z" />
+        <path d="M8 3v6h8V3" />
+        <path d="M8 15h8" />
+      </symbol>
+      <symbol id="icon-route" viewBox="0 0 24 24">
+        <path d="M6 5a3 3 0 0 0 0 6c4 0 8 2 8 5a3 3 0 1 0 3-3" />
+        <path d="M6 5h.01" />
+        <path d="M17 19h.01" />
+      </symbol>
+      <symbol id="icon-print" viewBox="0 0 24 24">
+        <path d="M7 8V3h10v5" />
+        <path d="M7 17H5a2 2 0 0 1-2-2v-4h18v4a2 2 0 0 1-2 2h-2" />
+        <path d="M7 14h10v7H7z" />
+      </symbol>
+    </svg>
+    <header class="app-header">
+      <div class="title-area">
+        <label for="tripTitle">標題</label>
+        <input id="tripTitle" class="trip-title" type="text" value="○○○旅行" />
+      </div>
+      <div class="toolbar">
+        <button id="addDayBtn" type="button"><svg><use href="#icon-plus"></use></svg>新增日期</button>
+        <button id="saveBtn" type="button"><svg><use href="#icon-save"></use></svg>儲存</button>
+        <button id="exportDraftBtn" type="button"><svg><use href="#icon-note"></use></svg>匯出草稿</button>
+        <label class="file-button" for="importDraftFile"><svg><use href="#icon-note"></use></svg>匯入草稿</label>
+        <input id="importDraftFile" type="file" accept="application/json,.json" />
+        <button id="exportExcelBtn" type="button"><svg><use href="#icon-note"></use></svg>匯出 Excel</button>
+        <button id="exportWordBtn" type="button"><svg><use href="#icon-note"></use></svg>匯出 Word</button>
+        <button id="newTripBtn" type="button"><svg><use href="#icon-trail"></use></svg>啟程</button>
+        <button id="printBtn" type="button"><svg><use href="#icon-print"></use></svg>列印</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="行程導覽">
+        <h2><svg><use href="#icon-leaf"></use></svg>行程日程</h2>
+        <nav id="dayNav" class="day-nav"></nav>
+        <div class="save-state" id="saveState">尚未儲存</div>
+      </aside>
+
+      <section class="workspace">
+        <section class="section-band" aria-labelledby="planHeading">
+          <div class="section-heading">
+            <span><svg><use href="#icon-trail"></use></svg></span>
+            <h2 id="planHeading">壹、行程規劃</h2>
+          </div>
+          <div id="daysContainer" class="days-container"></div>
+        </section>
+
+        <section class="section-band" aria-labelledby="mapHeading">
+          <div class="section-heading">
+            <span><svg><use href="#icon-map"></use></svg></span>
+            <h2 id="mapHeading">貳、地圖</h2>
+          </div>
+          <div class="map-grid">
+            <label>
+              旅遊地地圖
+              <input id="travelMapUrl" type="url" placeholder="貼上 Google Maps 或官方地圖連結" />
+            </label>
+            <label>
+              地鐵路線圖
+              <input id="metroMapUrl" type="url" placeholder="貼上地鐵路線圖連結" />
+            </label>
+            <label>
+              景點地點總覽
+              <input id="spotMapUrl" type="url" placeholder="貼上景點清單或自訂地圖連結" />
+            </label>
+          </div>
+          <div class="map-actions">
+            <a id="travelMapLink" target="_blank" rel="noreferrer">開啟旅遊地地圖</a>
+            <a id="metroMapLink" target="_blank" rel="noreferrer">開啟地鐵路線圖</a>
+            <a id="spotMapLink" target="_blank" rel="noreferrer">開啟景點地點</a>
+          </div>
+        </section>
+
+        <section class="section-band" aria-labelledby="historyHeading">
+          <div class="section-heading">
+            <span><svg><use href="#icon-mountain"></use></svg></span>
+            <h2 id="historyHeading">參、主要景點的人文歷史介紹</h2>
+          </div>
+          <div class="section-tools">
+            <button id="addSpotBtn" type="button"><svg><use href="#icon-plus"></use></svg>新增景點介紹</button>
+          </div>
+          <div id="spotsContainer" class="spots-container"></div>
+        </section>
+
+        <section class="section-band" aria-labelledby="noteHeading">
+          <div class="section-heading">
+            <span><svg><use href="#icon-note"></use></svg></span>
+            <h2 id="noteHeading">肆、備註</h2>
+          </div>
+          <textarea id="generalNotes" rows="7" placeholder="簽證、預算、同行者需求、天氣、替代方案、購物清單等"></textarea>
+        </section>
+      </section>
+    </main>
+
+    <template id="dayTemplate">
+      <article class="day-panel">
+        <div class="day-header">
+          <div>
+            <p class="ordinal">一、日期</p>
+            <input class="day-date" type="date" />
+          </div>
+          <div class="day-title-wrap">
+            <label>日期標籤</label>
+            <input class="day-title" type="text" placeholder="第 1 天 / 抵達日 / 市區散步" />
+          </div>
+          <button class="remove-day danger" type="button">刪除本日</button>
+        </div>
+
+        <div class="day-fields">
+          <label>
+            二、當日行程
+            <textarea class="day-schedule" rows="5" placeholder="上午、下午、晚上行程，可逐行輸入"></textarea>
+          </label>
+
+          <div class="transport-box">
+            <div class="transport-heading">
+              <h3>三、交通</h3>
+              <button class="add-route-segment" type="button"><svg><use href="#icon-plus"></use></svg>新增停留地</button>
+            </div>
+            <div class="route-segments"></div>
+            <textarea class="transport-notes" rows="3" placeholder="班次、轉乘、票券、停車、備用交通方式"></textarea>
+          </div>
+
+          <label>
+            四、飲食
+            <textarea class="day-food" rows="4" placeholder="早餐、午餐、晚餐、想吃餐廳、訂位資訊"></textarea>
+          </label>
+
+          <label>
+            五、當日住宿
+            <textarea class="day-lodging" rows="4" placeholder="飯店名稱、地址、入住時間、交通方式"></textarea>
+          </label>
+        </div>
+      </article>
+    </template>
+
+    <template id="routeSegmentTemplate">
+      <article class="route-segment">
+        <div class="route-segment-heading">
+          <h4>路段</h4>
+          <div class="route-segment-actions">
+            <button class="calculate-route" type="button"><svg><use href="#icon-route"></use></svg>估算本段</button>
+            <button class="remove-route-segment danger" type="button">刪除</button>
+          </div>
+        </div>
+        <div class="route-grid">
+          <label>
+            出發地
+            <input class="route-from" type="text" placeholder="例如：東京車站" />
+          </label>
+          <label>
+            目的地 / 停留地
+            <input class="route-to" type="text" placeholder="例如：淺草寺" />
+          </label>
+          <label>
+            交通方式
+            <select class="route-mode">
+              <option value="driving">開車</option>
+              <option value="walking">步行</option>
+              <option value="metro">地鐵</option>
+              <option value="train">火車</option>
+              <option value="bus">巴士</option>
+              <option value="mrt">捷運</option>
+            </select>
+          </label>
+          <label>
+            預估時間
+            <input class="route-result" type="text" placeholder="可自動估算或手動填寫" />
+          </label>
+        </div>
+        <p class="route-status"></p>
+      </article>
+    </template>
+
+    <template id="spotTemplate">
+      <article class="spot-panel">
+        <div class="spot-header">
+          <label>
+            景點名稱
+            <input class="spot-name" type="text" placeholder="例如：清水寺" />
+          </label>
+          <button class="remove-spot danger" type="button">刪除</button>
+        </div>
+        <div class="spot-grid">
+          <label>
+            地點或地圖連結
+            <input class="spot-location" type="text" placeholder="地址、座標或地圖 URL" />
+          </label>
+          <label>
+            建議停留時間
+            <input class="spot-duration" type="text" placeholder="例如：90 分鐘" />
+          </label>
+        </div>
+        <label>
+          人文歷史介紹
+          <textarea class="spot-history" rows="5" placeholder="歷史背景、建築特色、文化意義、參觀重點"></textarea>
+        </label>
+      </article>
+    </template>
+
+    <script src="script.js"></script>
+  </body>
+</html>

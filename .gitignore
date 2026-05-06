@@ -1,0 +1,36 @@
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Agent/editor local state
+.codex/
+.agents/
+.vscode/
+.idea/
+
+# Node and build outputs
+node_modules/
+dist/
+build/
+.vite/
+.next/
+out/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Travel-sensitive local-only material
+private/
+secrets/
+booking-documents/
