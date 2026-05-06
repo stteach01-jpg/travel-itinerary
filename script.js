@@ -554,12 +554,12 @@ function updateMapLinks() {
   });
 }
 
-async function calculateRoute(dayNode) {
-  const fromInput = dayNode.querySelector(".route-from");
-  const toInput = dayNode.querySelector(".route-to");
-  const modeInput = dayNode.querySelector(".route-mode");
-  const resultInput = dayNode.querySelector(".route-result");
-  const status = dayNode.querySelector(".route-status");
+function calculateRoute(segmentNode) {
+  const fromInput = segmentNode.querySelector(".route-from");
+  const toInput = segmentNode.querySelector(".route-to");
+  const modeInput = segmentNode.querySelector(".route-mode");
+  const resultInput = segmentNode.querySelector(".route-result");
+  const status = segmentNode.querySelector(".route-status");
   const from = fromInput.value.trim();
   const to = toInput.value.trim();
 
@@ -568,46 +568,14 @@ async function calculateRoute(dayNode) {
     return;
   }
 
-  status.textContent = "正在查詢路線...";
-
-  try {
-    const [fromPoint, toPoint] = await Promise.all([geocode(from), geocode(to)]);
-    if (!fromPoint || !toPoint) {
-      status.textContent = "查不到其中一個地點，請改用更完整的地址或手動填寫。";
-      return;
-    }
-
-    const profile = modeInput.value === "walking" ? "foot" : "car";
-    const routeUrl = `https://router.project-osrm.org/route/v1/${profile}/${fromPoint.lon},${fromPoint.lat};${toPoint.lon},${toPoint.lat}?overview=false`;
-    const response = await fetch(routeUrl);
-    if (!response.ok) throw new Error("route failed");
-    const data = await response.json();
-    const route = data.routes?.[0];
-    if (!route) throw new Error("route missing");
-
-    const minutes = Math.round(route.duration / 60);
-    const distance = (route.distance / 1000).toFixed(1);
-    const modeText = getRouteModeLabel(modeInput.value);
-    resultInput.value = `${modeText}約 ${minutes} 分鐘，${distance} 公里`;
-    status.textContent = "已完成估算。實際時間仍需依交通狀況調整。";
-    collectData();
-    markUnsaved();
-  } catch {
-    status.textContent = "自動估算暫時失敗，可手動填寫，或稍後再試。";
-  }
-}
-
-async function geocode(query) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-  if (!response.ok) return null;
-  const [item] = await response.json();
-  if (!item) return null;
-  return { lat: item.lat, lon: item.lon };
+  const googleMapsUrl = buildGoogleMapsDirectionsUrl(from, to, modeInput.value);
+  const opened = window.open(googleMapsUrl, "_blank", "noreferrer");
+  resultInput.value ||= `以 Google Maps ${getRouteModeLabel(modeInput.value)}估算為準`;
+  status.textContent = opened
+    ? "已開啟 Google Maps，請將頁面顯示的時間填入預估時間。"
+    : "瀏覽器封鎖了新分頁，請允許彈出視窗後再試。";
+  collectData();
+  markUnsaved();
 }
 
 function markUnsaved() {
@@ -624,6 +592,34 @@ function getRouteModeLabel(mode) {
     mrt: "捷運",
   };
   return labels[mode] || "交通";
+}
+
+function buildGoogleMapsDirectionsUrl(from, to, mode) {
+  const params = new URLSearchParams({
+    api: "1",
+    origin: from,
+    destination: to,
+    travelmode: getGoogleTravelMode(mode),
+  });
+  const transitMode = getGoogleTransitMode(mode);
+  if (transitMode) params.set("transit_mode", transitMode);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function getGoogleTravelMode(mode) {
+  if (mode === "walking") return "walking";
+  if (mode === "driving") return "driving";
+  return "transit";
+}
+
+function getGoogleTransitMode(mode) {
+  const modes = {
+    metro: "subway",
+    mrt: "subway",
+    train: "train",
+    bus: "bus",
+  };
+  return modes[mode] || "";
 }
 
 function safeFilename(name) {

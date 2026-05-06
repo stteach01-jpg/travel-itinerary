@@ -13,7 +13,7 @@ Current features:
 - Edit the trip title: `○○○旅行`
 - Add or remove daily itinerary blocks
 - Record date, daily schedule, transportation, food, and lodging
-- Estimate route time between two places through public map services, with manual fallback
+- Use Google Maps as the main reference for each transportation segment's estimated travel time
 - Add multiple transportation segments/stops within the same day, each with its own transportation mode
 - Add travel maps, metro maps, and spot map links
 - Add human-history introductions for major sights
