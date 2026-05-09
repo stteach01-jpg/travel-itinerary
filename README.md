@@ -20,7 +20,7 @@ Current features:
 - Keep general notes
 - Save in the browser as a local draft
 - Export/import editable draft JSON files for continued editing later
-- Export finished itineraries as `.xlsx` or Word-compatible `.doc`, including uploaded daily map images
+- Export finished itineraries as `.xlsx` with map image URLs as text, or Word-compatible `.doc` with map images displayed
 - Start a fresh itinerary with the `啟程` button
 - Print
 

@@ -19,6 +19,7 @@ const defaultData = {
       food: "",
       lodging: "",
       mapImage: null,
+      mapImageUrl: "",
     },
   ],
   spots: [
@@ -175,6 +176,7 @@ function render() {
     node.querySelector(".transport-notes").value = day.transportNotes;
     node.querySelector(".day-food").value = day.food;
     node.querySelector(".day-lodging").value = day.lodging;
+    node.querySelector(".day-map-url").value = day.mapImageUrl || "";
     setDayMapPreview(node, day.mapImage);
     renderRouteSegments(node, day.routeSegments);
 
@@ -313,6 +315,7 @@ function collectData() {
           dataUrl: node.dataset.mapDataUrl,
         }
       : null,
+    mapImageUrl: node.querySelector(".day-map-url").value.trim(),
   }));
 
   tripData.spots = [...document.querySelectorAll(".spot-panel")].map((node) => ({
@@ -358,7 +361,7 @@ function buildExcelHtml(data) {
       day.transportNotes,
       day.food,
       day.lodging,
-      formatDayMapForExcel(day.mapImage),
+      formatDayMapForExcel(day),
     ]),
     [],
     ["貳、主要景點的人文歷史介紹", "", "", ""],
@@ -395,30 +398,16 @@ async function buildExcelWorkbook(data) {
   if (!window.JSZip) throw new Error("JSZip is not available");
 
   const zip = new JSZip();
-  const { rows, images } = buildExcelRows(data);
-  const imageTypes = images.map((image, index) => ({
-    ...image,
-    id: index + 1,
-    ext: getImageExtension(image.dataUrl),
-    contentType: getImageContentType(image.dataUrl),
-    base64: getImageBase64(image.dataUrl),
-  }));
+  const rows = buildExcelRows(data);
 
-  zip.file("[Content_Types].xml", buildContentTypesXml(imageTypes));
+  zip.file("[Content_Types].xml", buildContentTypesXml());
   zip.file("_rels/.rels", buildRootRelsXml());
   zip.file("docProps/app.xml", buildAppXml());
   zip.file("docProps/core.xml", buildCoreXml(data.title));
   zip.file("xl/workbook.xml", buildWorkbookXml());
   zip.file("xl/_rels/workbook.xml.rels", buildWorkbookRelsXml());
   zip.file("xl/styles.xml", buildStylesXml());
-  zip.file("xl/worksheets/sheet1.xml", buildWorksheetXml(rows, imageTypes));
-  zip.file("xl/worksheets/_rels/sheet1.xml.rels", buildWorksheetRelsXml());
-  zip.file("xl/drawings/drawing1.xml", buildDrawingXml(imageTypes));
-  zip.file("xl/drawings/_rels/drawing1.xml.rels", buildDrawingRelsXml(imageTypes));
-
-  imageTypes.forEach((image) => {
-    zip.file(`xl/media/image${image.id}.${image.ext}`, image.base64, { base64: true });
-  });
+  zip.file("xl/worksheets/sheet1.xml", buildWorksheetXml(rows));
 
   return zip.generateAsync({
     type: "blob",
@@ -431,10 +420,8 @@ function buildExcelRows(data) {
     ["壹、行程規劃", "", "", "", "", "", "", ""],
     ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿", "地圖"],
   ];
-  const images = [];
 
   data.days.forEach((day) => {
-    const rowNumber = rows.length + 1;
     rows.push([
       day.date,
       day.title,
@@ -443,16 +430,8 @@ function buildExcelRows(data) {
       day.transportNotes,
       day.food,
       day.lodging,
-      day.mapImage?.name || "",
+      formatDayMapForExcel(day),
     ]);
-    if (day.mapImage?.dataUrl) {
-      images.push({
-        row: rowNumber,
-        col: 8,
-        name: day.mapImage.name || "map-image",
-        dataUrl: day.mapImage.dataUrl,
-      });
-    }
   });
 
   rows.push([]);
@@ -464,19 +443,17 @@ function buildExcelRows(data) {
   rows.push([]);
   rows.push(["參、備註", data.notes]);
 
-  return { rows, images };
+  return rows;
 }
 
-function buildWorksheetXml(rows, images) {
-  const imageRows = new Set(images.map((image) => image.row));
+function buildWorksheetXml(rows) {
   const sheetRows = rows
     .map((row, rowIndex) => {
       const rowNumber = rowIndex + 1;
-      const height = imageRows.has(rowNumber) ? ' ht="140" customHeight="1"' : "";
       const cells = row
         .map((value, colIndex) => buildCellXml(rowNumber, colIndex + 1, value))
         .join("");
-      return `<row r="${rowNumber}"${height}>${cells}</row>`;
+      return `<row r="${rowNumber}">${cells}</row>`;
     })
     .join("");
 
@@ -489,7 +466,6 @@ function buildWorksheetXml(rows, images) {
     <col min="8" max="8" width="52" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows}</sheetData>
-  <drawing r:id="rId1"/>
 </worksheet>`;
 }
 
@@ -499,44 +475,16 @@ function buildCellXml(rowNumber, colNumber, value) {
   return `<c r="${ref}" t="inlineStr" s="${style}"><is><t>${xlsxEscape(value || "")}</t></is></c>`;
 }
 
-function buildDrawingXml(images) {
-  const anchors = images
-    .map((image) => {
-      const col = image.col - 1;
-      const row = image.row - 1;
-      return `<xdr:oneCellAnchor>
-  <xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
-  <xdr:ext cx="3600000" cy="2100000"/>
-  <xdr:pic>
-    <xdr:nvPicPr><xdr:cNvPr id="${image.id}" name="${xlsxEscape(image.name)}"/><xdr:cNvPicPr/></xdr:nvPicPr>
-    <xdr:blipFill><a:blip r:embed="rId${image.id}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>
-    <xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>
-  </xdr:pic>
-  <xdr:clientData/>
-</xdr:oneCellAnchor>`;
-    })
-    .join("");
-
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors}</xdr:wsDr>`;
-}
-
-function buildContentTypesXml(images) {
-  const imageDefaults = [...new Set(images.map((image) => image.ext))]
-    .map((ext) => `<Default Extension="${ext}" ContentType="${getContentTypeFromExtension(ext)}"/>`)
-    .join("");
-
+function buildContentTypesXml() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
-  ${imageDefaults}
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-  <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
 </Types>`;
 }
 
@@ -562,24 +510,6 @@ function buildWorkbookRelsXml() {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
-}
-
-function buildWorksheetRelsXml() {
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
-</Relationships>`;
-}
-
-function buildDrawingRelsXml(images) {
-  const rels = images
-    .map(
-      (image) =>
-        `<Relationship Id="rId${image.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${image.id}.${image.ext}"/>`
-    )
-    .join("");
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}</Relationships>`;
 }
 
 function buildStylesXml() {
@@ -619,32 +549,6 @@ function columnName(columnNumber) {
   return name;
 }
 
-function getImageBase64(dataUrl) {
-  return dataUrl.split(",")[1] || "";
-}
-
-function getImageExtension(dataUrl) {
-  if (dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg")) return "jpg";
-  if (dataUrl.startsWith("data:image/gif")) return "gif";
-  if (dataUrl.startsWith("data:image/webp")) return "webp";
-  return "png";
-}
-
-function getImageContentType(dataUrl) {
-  const match = dataUrl.match(/^data:([^;]+);base64,/);
-  return match?.[1] || "image/png";
-}
-
-function getContentTypeFromExtension(ext) {
-  const types = {
-    jpg: "image/jpeg",
-    png: "image/png",
-    gif: "image/gif",
-    webp: "image/webp",
-  };
-  return types[ext] || "image/png";
-}
-
 function xlsxEscape(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -667,7 +571,7 @@ function buildWordHtml(data) {
       </p>
       <p><strong>四、飲食：</strong><br>${formatParagraph(day.food)}</p>
       <p><strong>五、當日住宿：</strong><br>${formatParagraph(day.lodging)}</p>
-      <p><strong>六、地圖：</strong><br>${formatDayMapForWord(day.mapImage)}</p>`
+      <p><strong>六、地圖：</strong><br>${formatDayMapForWord(day)}</p>`
     )
     .join("");
 
@@ -740,10 +644,8 @@ function formatCell(value) {
   return escapeHtml(value || "").replace(/\n/g, "<br>");
 }
 
-function formatDayMapForExcel(image) {
-  if (!image?.dataUrl) return "尚未上傳地圖";
-  const name = image.name ? `<div>${escapeHtml(image.name)}</div>` : "";
-  return `${name}<img src="${image.dataUrl}" alt="當日行程地圖" />`;
+function formatDayMapForExcel(day) {
+  return joinLines([day.mapImageUrl, day.mapImage?.name ? `上傳圖檔：${day.mapImage.name}` : ""]);
 }
 
 function formatParagraph(value) {
@@ -751,10 +653,16 @@ function formatParagraph(value) {
   return safe ? safe.replace(/\n/g, "<br>") : "";
 }
 
-function formatDayMapForWord(image) {
-  if (!image?.dataUrl) return "尚未上傳地圖";
-  const name = image.name ? `<p>${escapeHtml(image.name)}</p>` : "";
-  return `${name}<img src="${image.dataUrl}" alt="當日行程地圖" style="max-width: 100%; height: auto;" />`;
+function formatDayMapForWord(day) {
+  const parts = [];
+  if (day.mapImage?.dataUrl) {
+    const name = day.mapImage.name ? `<p>${escapeHtml(day.mapImage.name)}</p>` : "";
+    parts.push(`${name}<img src="${day.mapImage.dataUrl}" alt="當日行程地圖" style="max-width: 100%; height: auto;" />`);
+  }
+  if (day.mapImageUrl) {
+    parts.push(`<p>${linkOrText(day.mapImageUrl)}</p><img src="${escapeHtml(day.mapImageUrl)}" alt="當日行程連結地圖" style="max-width: 100%; height: auto;" />`);
+  }
+  return parts.length ? parts.join("") : "尚未上傳地圖";
 }
 
 function linkOrText(value) {
@@ -821,6 +729,7 @@ function normalizeDay(day) {
     food: day.food || "",
     lodging: day.lodging || "",
     mapImage: normalizeMapImage(day.mapImage),
+    mapImageUrl: day.mapImageUrl || "",
   };
 }
 
