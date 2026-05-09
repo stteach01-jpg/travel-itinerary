@@ -451,8 +451,7 @@ label select {
   justify-content: flex-end;
 }
 
-.route-grid,
-.spot-grid {
+.route-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
@@ -489,8 +488,7 @@ label select {
   }
 
   .day-header,
-  .route-grid,
-  .spot-grid {
+  .route-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -25,8 +25,6 @@ const defaultData = {
   spots: [
     {
       name: "",
-      location: "",
-      duration: "",
       history: "",
     },
   ],
@@ -218,8 +216,6 @@ function render() {
     const node = spotTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.index = index;
     node.querySelector(".spot-name").value = spot.name;
-    node.querySelector(".spot-location").value = spot.location;
-    node.querySelector(".spot-duration").value = spot.duration;
     node.querySelector(".spot-history").value = spot.history;
     node.querySelector(".remove-spot").addEventListener("click", () => {
       collectData();
@@ -320,8 +316,6 @@ function collectData() {
 
   tripData.spots = [...document.querySelectorAll(".spot-panel")].map((node) => ({
     name: node.querySelector(".spot-name").value.trim(),
-    location: node.querySelector(".spot-location").value.trim(),
-    duration: node.querySelector(".spot-duration").value.trim(),
     history: node.querySelector(".spot-history").value,
   }));
 }
@@ -364,9 +358,9 @@ function buildExcelHtml(data) {
       formatDayMapForExcel(day),
     ]),
     [],
-    ["貳、主要景點的人文歷史介紹", "", "", ""],
-    ["景點名稱", "地點或地圖連結", "建議停留時間", "人文歷史介紹"],
-    ...data.spots.map((spot) => [spot.name, spot.location, spot.duration, spot.history]),
+    ["貳、主要景點的人文歷史介紹", "", ""],
+    ["景點名稱", "人文歷史介紹"],
+    ...data.spots.map((spot) => [spot.name, spot.history]),
     [],
     ["參、備註", data.notes],
   ];
@@ -435,10 +429,10 @@ function buildExcelRows(data) {
   });
 
   rows.push([]);
-  rows.push(["貳、主要景點的人文歷史介紹", "", "", ""]);
-  rows.push(["景點名稱", "地點或地圖連結", "建議停留時間", "人文歷史介紹"]);
+  rows.push(["貳、主要景點的人文歷史介紹", "", ""]);
+  rows.push(["景點名稱", "人文歷史介紹"]);
   data.spots.forEach((spot) => {
-    rows.push([spot.name, spot.location, spot.duration, spot.history]);
+    rows.push([spot.name, spot.history]);
   });
   rows.push([]);
   rows.push(["參、備註", data.notes]);
@@ -579,8 +573,6 @@ function buildWordHtml(data) {
     .map(
       (spot) => `
       <h3>${escapeHtml(spot.name || "未命名景點")}</h3>
-      <p><strong>地點或地圖連結：</strong>${escapeHtml(spot.location || "")}</p>
-      <p><strong>建議停留時間：</strong>${escapeHtml(spot.duration || "")}</p>
       <p><strong>人文歷史介紹：</strong><br>${formatParagraph(spot.history)}</p>`
     )
     .join("");
@@ -699,7 +691,7 @@ function normalizeData(data) {
       Array.isArray(data.days) && data.days.length
         ? data.days.map(normalizeDay)
         : structuredClone(defaultData.days),
-    spots: Array.isArray(data.spots) ? data.spots : defaultData.spots,
+    spots: Array.isArray(data.spots) ? data.spots.map(normalizeSpot) : structuredClone(defaultData.spots),
     notes: data.notes || "",
   };
 }
@@ -738,6 +730,13 @@ function normalizeMapImage(image) {
   return {
     name: image.name || "map-image",
     dataUrl: image.dataUrl,
+  };
+}
+
+function normalizeSpot(spot) {
+  return {
+    name: spot.name || "",
+    history: spot.history || "",
   };
 }
 
