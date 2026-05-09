@@ -349,7 +349,7 @@ function readImageFile(file) {
 function buildExcelHtml(data) {
   const rows = [
     ["壹、行程規劃", "", "", "", "", "", ""],
-    ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿", "地圖圖檔"],
+    ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿", "地圖"],
     ...data.days.map((day) => [
       day.date,
       day.title,
@@ -358,7 +358,7 @@ function buildExcelHtml(data) {
       day.transportNotes,
       day.food,
       day.lodging,
-      day.mapImage?.name || "",
+      formatDayMapForExcel(day.mapImage),
     ]),
     [],
     ["貳、主要景點的人文歷史介紹", "", "", ""],
@@ -380,6 +380,7 @@ function buildExcelHtml(data) {
     body { font-family: "Microsoft JhengHei", Arial, sans-serif; }
     table { border-collapse: collapse; width: 100%; }
     td { border: 1px solid #8fa58c; padding: 8px; vertical-align: top; white-space: pre-wrap; }
+    img { max-width: 420px; height: auto; display: block; }
     tr:first-child td { background: #dcebd3; font-weight: bold; font-size: 18px; }
   </style>
 </head>
@@ -468,7 +469,14 @@ function formatRouteSegments(routeSegments) {
 }
 
 function formatCell(value) {
+  if (typeof value === "string" && value.includes("<img ")) return value;
   return escapeHtml(value || "").replace(/\n/g, "<br>");
+}
+
+function formatDayMapForExcel(image) {
+  if (!image?.dataUrl) return "尚未上傳地圖";
+  const name = image.name ? `<div>${escapeHtml(image.name)}</div>` : "";
+  return `${name}<img src="${image.dataUrl}" alt="當日行程地圖" />`;
 }
 
 function formatParagraph(value) {
