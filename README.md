@@ -21,7 +21,7 @@ Current features:
 - Save in the browser as a local draft
 - Export/import editable draft JSON files for continued editing later
 - Export finished itineraries as `.xlsx` with map image URLs as text, or Word-compatible `.doc` with map images displayed
-- Start a fresh itinerary with the `啟程` button
+- Start a fresh itinerary with the `開啟新行程` button
 - Print
 
 ## Project Notes

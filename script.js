@@ -124,13 +124,13 @@ exportWordBtn.addEventListener("click", () => {
 });
 
 newTripBtn.addEventListener("click", () => {
-  const shouldReset = window.confirm("要啟程開始新的旅行規劃嗎？目前畫面內容會重設，建議先匯出草稿。");
+  const shouldReset = window.confirm("要開啟新的旅行規劃嗎？目前畫面內容會重設，建議先匯出草稿。");
   if (!shouldReset) return;
 
   tripData = structuredClone(defaultData);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tripData));
   render();
-  saveState.textContent = "已啟程，開始新的旅行規劃";
+  saveState.textContent = "已開啟新行程";
 });
 
 printBtn.addEventListener("click", () => {
