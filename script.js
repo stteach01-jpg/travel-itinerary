@@ -652,7 +652,8 @@ function formatDayMapForWord(day) {
     parts.push(`${name}<img src="${day.mapImage.dataUrl}" alt="當日行程地圖" style="max-width: 100%; height: auto;" />`);
   }
   if (day.mapImageUrl) {
-    parts.push(`<p>${linkOrText(day.mapImageUrl)}</p><img src="${escapeHtml(day.mapImageUrl)}" alt="當日行程連結地圖" style="max-width: 100%; height: auto;" />`);
+    const linkedImage = `<img src="${escapeHtml(day.mapImageUrl)}" alt="當日行程連結地圖" style="max-width: 100%; height: auto;" />`;
+    parts.push(day.mapImage?.dataUrl ? `<p>圖片連結：${linkOrText(day.mapImageUrl)}</p>` : `<p>${linkOrText(day.mapImageUrl)}</p>${linkedImage}`);
   }
   return parts.length ? parts.join("") : "尚未上傳地圖";
 }
