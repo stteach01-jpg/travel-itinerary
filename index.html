@@ -87,36 +87,10 @@
           <div id="daysContainer" class="days-container"></div>
         </section>
 
-        <section class="section-band" aria-labelledby="mapHeading">
-          <div class="section-heading">
-            <span><svg><use href="#icon-map"></use></svg></span>
-            <h2 id="mapHeading">貳、地圖</h2>
-          </div>
-          <div class="map-grid">
-            <label>
-              旅遊地地圖
-              <input id="travelMapUrl" type="url" placeholder="貼上 Google Maps 或官方地圖連結" />
-            </label>
-            <label>
-              地鐵路線圖
-              <input id="metroMapUrl" type="url" placeholder="貼上地鐵路線圖連結" />
-            </label>
-            <label>
-              景點地點總覽
-              <input id="spotMapUrl" type="url" placeholder="貼上景點清單或自訂地圖連結" />
-            </label>
-          </div>
-          <div class="map-actions">
-            <a id="travelMapLink" target="_blank" rel="noreferrer">開啟旅遊地地圖</a>
-            <a id="metroMapLink" target="_blank" rel="noreferrer">開啟地鐵路線圖</a>
-            <a id="spotMapLink" target="_blank" rel="noreferrer">開啟景點地點</a>
-          </div>
-        </section>
-
         <section class="section-band" aria-labelledby="historyHeading">
           <div class="section-heading">
             <span><svg><use href="#icon-mountain"></use></svg></span>
-            <h2 id="historyHeading">參、主要景點的人文歷史介紹</h2>
+            <h2 id="historyHeading">貳、主要景點的人文歷史介紹</h2>
           </div>
           <div class="section-tools">
             <button id="addSpotBtn" type="button"><svg><use href="#icon-plus"></use></svg>新增景點介紹</button>
@@ -127,7 +101,7 @@
         <section class="section-band" aria-labelledby="noteHeading">
           <div class="section-heading">
             <span><svg><use href="#icon-note"></use></svg></span>
-            <h2 id="noteHeading">肆、備註</h2>
+            <h2 id="noteHeading">參、備註</h2>
           </div>
           <textarea id="generalNotes" rows="7" placeholder="簽證、預算、同行者需求、天氣、替代方案、購物清單等"></textarea>
         </section>
@@ -172,6 +146,21 @@
             五、當日住宿
             <textarea class="day-lodging" rows="4" placeholder="飯店名稱、地址、入住時間、交通方式"></textarea>
           </label>
+
+          <div class="day-map-box">
+            <div class="day-map-heading">
+              <h3>六、地圖</h3>
+              <button class="remove-day-map danger" type="button">移除地圖</button>
+            </div>
+            <label>
+              上傳地圖圖檔
+              <input class="day-map-file" type="file" accept="image/*" />
+            </label>
+            <div class="day-map-preview-wrap">
+              <img class="day-map-preview" alt="當日行程地圖預覽" />
+              <p class="day-map-empty">尚未上傳地圖</p>
+            </div>
+          </div>
         </div>
       </article>
     </template>

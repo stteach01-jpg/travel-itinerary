@@ -15,7 +15,7 @@ Current features:
 - Record date, daily schedule, transportation, food, and lodging
 - Use Google Maps as the main reference for each transportation segment's estimated travel time
 - Add multiple transportation segments/stops within the same day, each with its own transportation mode
-- Add travel maps, metro maps, and spot map links
+- Upload a map image at the end of each daily itinerary
 - Add human-history introductions for major sights
 - Keep general notes
 - Save in the browser as a local draft

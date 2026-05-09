@@ -18,13 +18,9 @@ const defaultData = {
       transportNotes: "",
       food: "",
       lodging: "",
+      mapImage: null,
     },
   ],
-  maps: {
-    travel: "",
-    metro: "",
-    spots: "",
-  },
   spots: [
     {
       name: "",
@@ -56,16 +52,6 @@ const addSpotBtn = document.querySelector("#addSpotBtn");
 const spotsContainer = document.querySelector("#spotsContainer");
 const spotTemplate = document.querySelector("#spotTemplate");
 const generalNotes = document.querySelector("#generalNotes");
-const mapInputs = {
-  travel: document.querySelector("#travelMapUrl"),
-  metro: document.querySelector("#metroMapUrl"),
-  spots: document.querySelector("#spotMapUrl"),
-};
-const mapLinks = {
-  travel: document.querySelector("#travelMapLink"),
-  metro: document.querySelector("#metroMapLink"),
-  spots: document.querySelector("#spotMapLink"),
-};
 
 render();
 
@@ -157,18 +143,26 @@ printBtn.addEventListener("click", () => {
 document.addEventListener("input", (event) => {
   if (event.target.matches("input, textarea, select")) {
     collectData();
-    updateMapLinks();
     updateDayNav();
     markUnsaved();
   }
 });
 
+document.addEventListener("change", async (event) => {
+  if (!event.target.matches(".day-map-file")) return;
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const dayNode = event.target.closest(".day-panel");
+  const image = await readImageFile(file);
+  setDayMapPreview(dayNode, image);
+  collectData();
+  markUnsaved();
+});
+
 function render() {
   tripTitle.value = tripData.title;
   generalNotes.value = tripData.notes;
-  mapInputs.travel.value = tripData.maps.travel;
-  mapInputs.metro.value = tripData.maps.metro;
-  mapInputs.spots.value = tripData.maps.spots;
 
   daysContainer.innerHTML = "";
   tripData.days.forEach((day, index) => {
@@ -181,6 +175,7 @@ function render() {
     node.querySelector(".transport-notes").value = day.transportNotes;
     node.querySelector(".day-food").value = day.food;
     node.querySelector(".day-lodging").value = day.lodging;
+    setDayMapPreview(node, day.mapImage);
     renderRouteSegments(node, day.routeSegments);
 
     node.querySelector(".remove-day").addEventListener("click", () => {
@@ -206,6 +201,13 @@ function render() {
       markUnsaved();
     });
 
+    node.querySelector(".remove-day-map").addEventListener("click", () => {
+      setDayMapPreview(node, null);
+      node.querySelector(".day-map-file").value = "";
+      collectData();
+      markUnsaved();
+    });
+
     daysContainer.appendChild(node);
   });
 
@@ -226,8 +228,24 @@ function render() {
     spotsContainer.appendChild(node);
   });
 
-  updateMapLinks();
   updateDayNav();
+}
+
+function setDayMapPreview(dayNode, image) {
+  const preview = dayNode.querySelector(".day-map-preview");
+  const empty = dayNode.querySelector(".day-map-empty");
+  dayNode.dataset.mapName = image?.name || "";
+  dayNode.dataset.mapDataUrl = image?.dataUrl || "";
+
+  if (image?.dataUrl) {
+    preview.src = image.dataUrl;
+    preview.hidden = false;
+    empty.textContent = image.name ? `已上傳：${image.name}` : "已上傳地圖";
+  } else {
+    preview.removeAttribute("src");
+    preview.hidden = true;
+    empty.textContent = "尚未上傳地圖";
+  }
 }
 
 function renderRouteSegments(dayNode, routeSegments) {
@@ -275,11 +293,6 @@ function refreshRouteSegmentTitles(container) {
 function collectData() {
   tripData.title = tripTitle.value.trim() || "○○○旅行";
   tripData.notes = generalNotes.value;
-  tripData.maps = {
-    travel: mapInputs.travel.value.trim(),
-    metro: mapInputs.metro.value.trim(),
-    spots: mapInputs.spots.value.trim(),
-  };
 
   tripData.days = [...document.querySelectorAll(".day-panel")].map((node) => ({
     date: node.querySelector(".day-date").value,
@@ -294,6 +307,12 @@ function collectData() {
     transportNotes: node.querySelector(".transport-notes").value,
     food: node.querySelector(".day-food").value,
     lodging: node.querySelector(".day-lodging").value,
+    mapImage: node.dataset.mapDataUrl
+      ? {
+          name: node.dataset.mapName || "map-image",
+          dataUrl: node.dataset.mapDataUrl,
+        }
+      : null,
   }));
 
   tripData.spots = [...document.querySelectorAll(".spot-panel")].map((node) => ({
@@ -313,10 +332,24 @@ function saveData() {
   })}`;
 }
 
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve({
+        name: file.name,
+        dataUrl: reader.result,
+      });
+    });
+    reader.addEventListener("error", reject);
+    reader.readAsDataURL(file);
+  });
+}
+
 function buildExcelHtml(data) {
   const rows = [
     ["壹、行程規劃", "", "", "", "", "", ""],
-    ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿"],
+    ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿", "地圖圖檔"],
     ...data.days.map((day) => [
       day.date,
       day.title,
@@ -325,18 +358,14 @@ function buildExcelHtml(data) {
       day.transportNotes,
       day.food,
       day.lodging,
+      day.mapImage?.name || "",
     ]),
     [],
-    ["貳、地圖", "", ""],
-    ["旅遊地地圖", data.maps.travel],
-    ["地鐵路線圖", data.maps.metro],
-    ["景點地點總覽", data.maps.spots],
-    [],
-    ["參、主要景點的人文歷史介紹", "", "", ""],
+    ["貳、主要景點的人文歷史介紹", "", "", ""],
     ["景點名稱", "地點或地圖連結", "建議停留時間", "人文歷史介紹"],
     ...data.spots.map((spot) => [spot.name, spot.location, spot.duration, spot.history]),
     [],
-    ["肆、備註", data.notes],
+    ["參、備註", data.notes],
   ];
 
   const tableRows = rows
@@ -373,7 +402,8 @@ function buildWordHtml(data) {
         ${formatParagraph(day.transportNotes)}
       </p>
       <p><strong>四、飲食：</strong><br>${formatParagraph(day.food)}</p>
-      <p><strong>五、當日住宿：</strong><br>${formatParagraph(day.lodging)}</p>`
+      <p><strong>五、當日住宿：</strong><br>${formatParagraph(day.lodging)}</p>
+      <p><strong>六、地圖：</strong><br>${formatDayMapForWord(day.mapImage)}</p>`
     )
     .join("");
 
@@ -404,13 +434,9 @@ function buildWordHtml(data) {
   <h1>${escapeHtml(data.title)}</h1>
   <h2>壹、行程規劃</h2>
   ${daySections || "<p>尚未填寫行程。</p>"}
-  <h2>貳、地圖</h2>
-  <p><strong>旅遊地地圖：</strong>${linkOrText(data.maps.travel)}</p>
-  <p><strong>地鐵路線圖：</strong>${linkOrText(data.maps.metro)}</p>
-  <p><strong>景點地點總覽：</strong>${linkOrText(data.maps.spots)}</p>
-  <h2>參、主要景點的人文歷史介紹</h2>
+  <h2>貳、主要景點的人文歷史介紹</h2>
   ${spotSections || "<p>尚未填寫景點介紹。</p>"}
-  <h2>肆、備註</h2>
+  <h2>參、備註</h2>
   <p>${formatParagraph(data.notes)}</p>
 </body>
 </html>`;
@@ -450,6 +476,12 @@ function formatParagraph(value) {
   return safe ? safe.replace(/\n/g, "<br>") : "";
 }
 
+function formatDayMapForWord(image) {
+  if (!image?.dataUrl) return "尚未上傳地圖";
+  const name = image.name ? `<p>${escapeHtml(image.name)}</p>` : "";
+  return `${name}<img src="${image.dataUrl}" alt="當日行程地圖" style="max-width: 100%; height: auto;" />`;
+}
+
 function linkOrText(value) {
   if (!value) return "";
   const safe = escapeHtml(value);
@@ -484,11 +516,6 @@ function normalizeData(data) {
       Array.isArray(data.days) && data.days.length
         ? data.days.map(normalizeDay)
         : structuredClone(defaultData.days),
-    maps: {
-      travel: data.maps?.travel || "",
-      metro: data.maps?.metro || "",
-      spots: data.maps?.spots || "",
-    },
     spots: Array.isArray(data.spots) ? data.spots : defaultData.spots,
     notes: data.notes || "",
   };
@@ -518,6 +545,15 @@ function normalizeDay(day) {
     transportNotes: day.transportNotes || "",
     food: day.food || "",
     lodging: day.lodging || "",
+    mapImage: normalizeMapImage(day.mapImage),
+  };
+}
+
+function normalizeMapImage(image) {
+  if (!image?.dataUrl) return null;
+  return {
+    name: image.name || "map-image",
+    dataUrl: image.dataUrl,
   };
 }
 
@@ -538,19 +574,6 @@ function updateDayNav() {
     const dateText = day.date ? `${day.date} ` : "";
     link.textContent = `${dateText}${day.title || `第 ${index + 1} 天`}`;
     dayNav.appendChild(link);
-  });
-}
-
-function updateMapLinks() {
-  Object.entries(mapLinks).forEach(([key, link]) => {
-    const value = mapInputs[key].value.trim();
-    if (value) {
-      link.href = value;
-      link.removeAttribute("aria-disabled");
-    } else {
-      link.removeAttribute("href");
-      link.setAttribute("aria-disabled", "true");
-    }
   });
 }
 

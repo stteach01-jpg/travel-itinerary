@@ -377,6 +377,47 @@ label select {
   font-size: 1rem;
 }
 
+.day-map-box {
+  display: grid;
+  gap: 0.8rem;
+  border: 1px solid #c2d9c5;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(237, 246, 237, 0.86), rgba(217, 237, 240, 0.74));
+  padding: 1rem;
+}
+
+.day-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.day-map-heading h3 {
+  color: var(--accent-strong);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.day-map-preview-wrap {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.day-map-preview {
+  max-width: 100%;
+  max-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.day-map-empty {
+  color: var(--muted);
+  margin: 0;
+}
+
 .route-segments {
   display: grid;
   gap: 0.75rem;
@@ -411,37 +452,10 @@ label select {
 }
 
 .route-grid,
-.map-grid,
 .spot-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
-}
-
-.map-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-
-.map-actions a {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.65);
-  color: var(--accent-strong);
-  padding: 0.6rem 0.8rem;
-  text-decoration: none;
-}
-
-.map-actions a[href]:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.map-actions a:not([href]) {
-  color: var(--muted);
-  cursor: not-allowed;
 }
 
 .section-tools {
@@ -476,7 +490,6 @@ label select {
 
   .day-header,
   .route-grid,
-  .map-grid,
   .spot-grid {
     grid-template-columns: 1fr;
   }
