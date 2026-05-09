@@ -102,15 +102,15 @@ importDraftFile.addEventListener("change", async (event) => {
   }
 });
 
-exportExcelBtn.addEventListener("click", () => {
+exportExcelBtn.addEventListener("click", async () => {
   collectData();
-  const html = buildExcelHtml(tripData);
-  downloadFile(
-    `${safeFilename(tripData.title)}-完成行程.xls`,
-    html,
-    "application/vnd.ms-excel;charset=utf-8"
-  );
-  saveState.textContent = "已匯出 Excel 檔";
+  try {
+    const blob = await buildExcelWorkbook(tripData);
+    downloadBlob(`${safeFilename(tripData.title)}-完成行程.xlsx`, blob);
+    saveState.textContent = "已匯出 Excel 檔";
+  } catch {
+    saveState.textContent = "Excel 匯出失敗，請確認網路可載入匯出工具後再試。";
+  }
 });
 
 exportWordBtn.addEventListener("click", () => {
@@ -391,6 +391,269 @@ function buildExcelHtml(data) {
 </html>`;
 }
 
+async function buildExcelWorkbook(data) {
+  if (!window.JSZip) throw new Error("JSZip is not available");
+
+  const zip = new JSZip();
+  const { rows, images } = buildExcelRows(data);
+  const imageTypes = images.map((image, index) => ({
+    ...image,
+    id: index + 1,
+    ext: getImageExtension(image.dataUrl),
+    contentType: getImageContentType(image.dataUrl),
+    base64: getImageBase64(image.dataUrl),
+  }));
+
+  zip.file("[Content_Types].xml", buildContentTypesXml(imageTypes));
+  zip.file("_rels/.rels", buildRootRelsXml());
+  zip.file("docProps/app.xml", buildAppXml());
+  zip.file("docProps/core.xml", buildCoreXml(data.title));
+  zip.file("xl/workbook.xml", buildWorkbookXml());
+  zip.file("xl/_rels/workbook.xml.rels", buildWorkbookRelsXml());
+  zip.file("xl/styles.xml", buildStylesXml());
+  zip.file("xl/worksheets/sheet1.xml", buildWorksheetXml(rows, imageTypes));
+  zip.file("xl/worksheets/_rels/sheet1.xml.rels", buildWorksheetRelsXml());
+  zip.file("xl/drawings/drawing1.xml", buildDrawingXml(imageTypes));
+  zip.file("xl/drawings/_rels/drawing1.xml.rels", buildDrawingRelsXml(imageTypes));
+
+  imageTypes.forEach((image) => {
+    zip.file(`xl/media/image${image.id}.${image.ext}`, image.base64, { base64: true });
+  });
+
+  return zip.generateAsync({
+    type: "blob",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
+
+function buildExcelRows(data) {
+  const rows = [
+    ["壹、行程規劃", "", "", "", "", "", "", ""],
+    ["日期", "日期標籤", "當日行程", "交通路段", "交通備註", "飲食", "當日住宿", "地圖"],
+  ];
+  const images = [];
+
+  data.days.forEach((day) => {
+    const rowNumber = rows.length + 1;
+    rows.push([
+      day.date,
+      day.title,
+      day.schedule,
+      formatRouteSegments(day.routeSegments),
+      day.transportNotes,
+      day.food,
+      day.lodging,
+      day.mapImage?.name || "",
+    ]);
+    if (day.mapImage?.dataUrl) {
+      images.push({
+        row: rowNumber,
+        col: 8,
+        name: day.mapImage.name || "map-image",
+        dataUrl: day.mapImage.dataUrl,
+      });
+    }
+  });
+
+  rows.push([]);
+  rows.push(["貳、主要景點的人文歷史介紹", "", "", ""]);
+  rows.push(["景點名稱", "地點或地圖連結", "建議停留時間", "人文歷史介紹"]);
+  data.spots.forEach((spot) => {
+    rows.push([spot.name, spot.location, spot.duration, spot.history]);
+  });
+  rows.push([]);
+  rows.push(["參、備註", data.notes]);
+
+  return { rows, images };
+}
+
+function buildWorksheetXml(rows, images) {
+  const imageRows = new Set(images.map((image) => image.row));
+  const sheetRows = rows
+    .map((row, rowIndex) => {
+      const rowNumber = rowIndex + 1;
+      const height = imageRows.has(rowNumber) ? ' ht="140" customHeight="1"' : "";
+      const cells = row
+        .map((value, colIndex) => buildCellXml(rowNumber, colIndex + 1, value))
+        .join("");
+      return `<row r="${rowNumber}"${height}>${cells}</row>`;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <cols>
+    <col min="1" max="1" width="14" customWidth="1"/>
+    <col min="2" max="2" width="18" customWidth="1"/>
+    <col min="3" max="7" width="28" customWidth="1"/>
+    <col min="8" max="8" width="52" customWidth="1"/>
+  </cols>
+  <sheetData>${sheetRows}</sheetData>
+  <drawing r:id="rId1"/>
+</worksheet>`;
+}
+
+function buildCellXml(rowNumber, colNumber, value) {
+  const ref = `${columnName(colNumber)}${rowNumber}`;
+  const style = rowNumber <= 2 ? 1 : 0;
+  return `<c r="${ref}" t="inlineStr" s="${style}"><is><t>${xlsxEscape(value || "")}</t></is></c>`;
+}
+
+function buildDrawingXml(images) {
+  const anchors = images
+    .map((image) => {
+      const col = image.col - 1;
+      const row = image.row - 1;
+      return `<xdr:oneCellAnchor>
+  <xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+  <xdr:ext cx="3600000" cy="2100000"/>
+  <xdr:pic>
+    <xdr:nvPicPr><xdr:cNvPr id="${image.id}" name="${xlsxEscape(image.name)}"/><xdr:cNvPicPr/></xdr:nvPicPr>
+    <xdr:blipFill><a:blip r:embed="rId${image.id}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>
+    <xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>
+  </xdr:pic>
+  <xdr:clientData/>
+</xdr:oneCellAnchor>`;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors}</xdr:wsDr>`;
+}
+
+function buildContentTypesXml(images) {
+  const imageDefaults = [...new Set(images.map((image) => image.ext))]
+    .map((ext) => `<Default Extension="${ext}" ContentType="${getContentTypeFromExtension(ext)}"/>`)
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  ${imageDefaults}
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
+</Types>`;
+}
+
+function buildRootRelsXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`;
+}
+
+function buildWorkbookXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="旅行行程" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+}
+
+function buildWorkbookRelsXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+}
+
+function buildWorksheetRelsXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
+</Relationships>`;
+}
+
+function buildDrawingRelsXml(images) {
+  const rels = images
+    .map(
+      (image) =>
+        `<Relationship Id="rId${image.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${image.id}.${image.ext}"/>`
+    )
+    .join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}</Relationships>`;
+}
+
+function buildStylesXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2"><font><sz val="11"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="12"/><name val="Microsoft JhengHei"/></font></fonts>
+  <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCEBD3"/><bgColor indexed="64"/></patternFill></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf><xf numFmtId="0" fontId="1" fillId="1" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs>
+</styleSheet>`;
+}
+
+function buildAppXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Travel Itinerary Planner</Application></Properties>`;
+}
+
+function buildCoreXml(title) {
+  const now = new Date().toISOString();
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>${xlsxEscape(title || "旅行行程")}</dc:title>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
+</cp:coreProperties>`;
+}
+
+function columnName(columnNumber) {
+  let name = "";
+  let current = columnNumber;
+  while (current > 0) {
+    const remainder = (current - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    current = Math.floor((current - 1) / 26);
+  }
+  return name;
+}
+
+function getImageBase64(dataUrl) {
+  return dataUrl.split(",")[1] || "";
+}
+
+function getImageExtension(dataUrl) {
+  if (dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg")) return "jpg";
+  if (dataUrl.startsWith("data:image/gif")) return "gif";
+  if (dataUrl.startsWith("data:image/webp")) return "webp";
+  return "png";
+}
+
+function getImageContentType(dataUrl) {
+  const match = dataUrl.match(/^data:([^;]+);base64,/);
+  return match?.[1] || "image/png";
+}
+
+function getContentTypeFromExtension(ext) {
+  const types = {
+    jpg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+  };
+  return types[ext] || "image/png";
+}
+
+function xlsxEscape(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function buildWordHtml(data) {
   const daySections = data.days
     .map(
@@ -445,6 +708,10 @@ function buildWordHtml(data) {
 
 function downloadFile(filename, content, type) {
   const blob = new Blob(["\ufeff", content], { type });
+  downloadBlob(filename, blob);
+}
+
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
