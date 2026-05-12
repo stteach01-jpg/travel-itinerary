@@ -31,6 +31,7 @@ Current features:
 - GitHub remote: `https://github.com/stteach01-jpg/travel-itinerary`
 - GitHub Pages: `https://stteach01-jpg.github.io/travel-itinerary/`
 - Android app skeleton: `android-app/`
+- Android APK: `itinerary/travel-itinerary-android-debug.apk`
 
 ## Safety
 

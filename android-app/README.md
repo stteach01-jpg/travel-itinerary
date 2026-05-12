@@ -18,6 +18,10 @@ This folder contains a native Android WebView shell for the travel itinerary pla
 3. Run the `app` configuration on an Android device or emulator.
 4. Build APK/AAB from Android Studio when needed.
 
+Current debug APK output:
+
+- `../itinerary/travel-itinerary-android-debug.apk`
+
 ## Notes
 
 - Google Maps links open outside the WebView.

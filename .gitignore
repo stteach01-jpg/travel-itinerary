@@ -40,3 +40,4 @@ android-app/.gradle/
 android-app/local.properties
 android-app/app/build/
 android-app/build/
+android-app/app/src/main/assets/www/
