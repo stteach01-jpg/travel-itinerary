@@ -28,7 +28,9 @@ Current features:
 
 - Obsidian dashboard: `G:\我的雲端硬碟\2026codex\secondbrain\知識庫\專案\travel itinerary.md`
 - Local folder: `G:\我的雲端硬碟\travel itinerary`
-- GitHub remote: not created yet
+- GitHub remote: `https://github.com/stteach01-jpg/travel-itinerary`
+- GitHub Pages: `https://stteach01-jpg.github.io/travel-itinerary/`
+- Android app skeleton: `android-app/`
 
 ## Safety
 

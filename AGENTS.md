@@ -30,6 +30,7 @@ When updating project state, first read the dashboard, then update it with conci
 - `index.html`: editable travel itinerary webpage.
 - `styles.css`: itinerary webpage layout and visual style.
 - `script.js`: itinerary data editing, local saving, JSON import/export, and route estimation.
+- `android-app/`: Android WebView app skeleton that packages the web planner as a native app shell.
 
 ## Sync Rules
 
